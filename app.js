@@ -7,6 +7,7 @@ const downloadButton = document.querySelector("#download-result");
 const togglePreviewButton = document.querySelector("#toggle-preview");
 const brushSizeInput = document.querySelector("#brush-size");
 const radiusInput = document.querySelector("#radius");
+const debugToggle = document.querySelector("#debug-toggle");
 const brushSizeValue = document.querySelector("#brush-size-value");
 const radiusValue = document.querySelector("#radius-value");
 const imageMeta = document.querySelector("#image-meta");
@@ -14,6 +15,8 @@ const resultMeta = document.querySelector("#result-meta");
 const viewerTitle = document.querySelector("#viewer-title");
 const engineStatus = document.querySelector("#opencv-status");
 const hintText = document.querySelector("#hint-text");
+const debugPanel = document.querySelector("#debug-panel");
+const debugText = document.querySelector("#debug-text");
 const editorShell = document.querySelector("#editor-shell");
 const editorEmptyState = document.querySelector("#editor-empty-state");
 const brushIndicator = document.querySelector("#brush-indicator");
@@ -26,7 +29,25 @@ const offscreenCtx = offscreenCanvas.getContext("2d");
 const maskCanvas = document.createElement("canvas");
 const maskCtx = maskCanvas.getContext("2d");
 
-const state = { isEngineReady: true, isDrawing: false, hasImage: false, hasResult: false, displayScale: 1, brushSize: 24, repairRadius: 5, previewMode: "before" };
+const state = { isEngineReady: true, isDrawing: false, hasImage: false, hasResult: false, displayScale: 1, brushSize: 24, repairRadius: 5, previewMode: "before", debugEnabled: false };
+
+function setDebugText(text) {
+  debugText.textContent = text;
+}
+
+function appendDebug(line) {
+  if (!state.debugEnabled) return;
+  const timestamp = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+  debugText.textContent = `${debugText.textContent}\n[${timestamp}] ${line}`.trim();
+}
+
+function setDebugEnabled(enabled) {
+  state.debugEnabled = enabled;
+  debugPanel.classList.toggle("hidden", !enabled);
+  if (enabled && !debugText.textContent.trim()) {
+    setDebugText("等待处理");
+  }
+}
 function setCanRun() {
   runButton.disabled = !(state.isEngineReady && state.hasImage);
   downloadButton.disabled = !state.hasResult;
@@ -86,6 +107,7 @@ function prepareCanvases(img) {
   requestAnimationFrame(redrawEditor);
   resetResultCanvas();
   imageMeta.textContent = `${width} × ${height}`;
+  appendDebug(`图片已加载: 原始 ${img.width}x${img.height}, 处理 ${width}x${height}`);
   setCanRun();
 }
 
@@ -247,15 +269,22 @@ function runRepair() {
   runButton.disabled = true;
   requestAnimationFrame(() => {
     try {
+      const startedAt = performance.now();
       const source = offscreenCtx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
       const mask = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
       const width = offscreenCanvas.width;
       const height = offscreenCanvas.height;
       const { flags, count } = getMaskFlags(mask);
+      appendDebug(`输入尺寸: ${width}x${height}`);
+      appendDebug(`遮罩像素: ${count}`);
       if (!count) throw new Error("请先涂抹需要修补的水印区域");
+      const t1 = performance.now();
       const expandedMask = dilateMask(flags, width, height, Math.max(1, Math.floor(state.repairRadius / 2)));
+      const t2 = performance.now();
       const repaired = diffuseFill(source, expandedMask, width, height, state.repairRadius);
+      const t3 = performance.now();
       const smoothed = blurMaskedEdge(repaired, expandedMask, width, height, Math.max(1, Math.floor(state.repairRadius / 3)));
+      const t4 = performance.now();
       const resultImageData = new ImageData(smoothed, width, height);
       const renderCanvas = document.createElement("canvas");
       renderCanvas.width = width;
@@ -267,11 +296,16 @@ function runRepair() {
       resultMeta.textContent = `已完成 · 遮罩像素 ${count}`;
       hintText.textContent = "处理完成。复杂背景会有限制，尽量缩小涂抹范围可提升效果。";
       playRevealAnimation();
+      appendDebug(`mask 膨胀耗时: ${(t2 - t1).toFixed(1)}ms`);
+      appendDebug(`扩散修补耗时: ${(t3 - t2).toFixed(1)}ms`);
+      appendDebug(`边缘平滑耗时: ${(t4 - t3).toFixed(1)}ms`);
+      appendDebug(`总耗时: ${(performance.now() - startedAt).toFixed(1)}ms`);
       setCanRun();
     } catch (error) {
       state.hasResult = false;
       resultMeta.textContent = "处理失败";
       hintText.textContent = `处理失败：${error?.message || "未知异常"}`;
+      appendDebug(`处理失败: ${error?.message || "未知异常"}`);
       setCanRun();
     } finally {
       runButton.disabled = !(state.isEngineReady && state.hasImage);
@@ -291,6 +325,7 @@ function handleImageUpload(file) {
   };
   img.onerror = () => {
     hintText.textContent = "图片加载失败，请换一张图再试。";
+    appendDebug("图片加载失败");
     URL.revokeObjectURL(url);
   };
   img.src = url;
@@ -355,6 +390,7 @@ downloadButton.addEventListener("click", () => {
 });
 brushSizeInput.addEventListener("input", () => { state.brushSize = Number(brushSizeInput.value); syncControlLabels(); });
 radiusInput.addEventListener("input", () => { state.repairRadius = Number(radiusInput.value); syncControlLabels(); });
+debugToggle.addEventListener("change", (event) => { setDebugEnabled(event.target.checked); });
 
 bindUploadTarget(editorShell);
 syncControlLabels();
@@ -366,3 +402,5 @@ togglePreviewButton.addEventListener("click", () => {
 });
 updateEmptyStates();
 setCanRun();
+setDebugText("等待处理");
+setDebugEnabled(false);

@@ -37,6 +37,11 @@
           <input id="radius" type="range" min="1" max="15" value="5">
         </div>
 
+        <label class="debug-toggle">
+          <input id="debug-toggle" type="checkbox">
+          <span>显示调试信息</span>
+        </label>
+
         <div class="actions">
           <button id="clear-mask" type="button" class="button secondary">清空涂抹</button>
           <button id="run-inpaint" type="button" class="button primary" disabled>开始去水印</button>
@@ -48,6 +53,10 @@
           <p>1. 上传图片</p>
           <p>2. 在左侧原图上涂抹水印区域</p>
           <p>3. 点击“开始去水印”查看处理效果</p>
+          <div id="debug-panel" class="debug-panel hidden">
+            <p class="debug-title">调试信息</p>
+            <pre id="debug-text">等待处理</pre>
+          </div>
         </div>
       </section>
 
