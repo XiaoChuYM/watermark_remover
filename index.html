@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>去水印本地演示</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Browser-Only Demo</p>
+        <h1>本地去水印演示</h1>
+        <p class="hero-copy">
+          图片只在当前浏览器处理，不上传服务器。你先用这个版本验证效果，再决定是否继续做线上站。
+        </p>
+      </div>
+      <div class="status-card">
+        <span id="opencv-status" class="status-pill pending">OpenCV.js 加载中</span>
+        <p id="hint-text">建议先用小面积文字或角落 logo 水印测试。</p>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel controls">
+        <label class="upload-card" for="image-input">
+          <input id="image-input" type="file" accept="image/*">
+          <span class="upload-title">上传图片</span>
+          <span class="upload-subtitle">支持常见图片格式，建议先用 2000px 以内图片</span>
+        </label>
+
+        <div class="control-group">
+          <label for="brush-size">画笔大小 <span id="brush-size-value">24 px</span></label>
+          <input id="brush-size" type="range" min="4" max="80" value="24">
+        </div>
+
+        <div class="control-group">
+          <label for="radius">修复半径 <span id="radius-value">5</span></label>
+          <input id="radius" type="range" min="1" max="15" value="5">
+        </div>
+
+        <div class="control-group">
+          <span class="label-title">算法</span>
+          <div class="segmented">
+            <label><input type="radio" name="algorithm" value="telea" checked> Telea</label>
+            <label><input type="radio" name="algorithm" value="ns"> Navier-Stokes</label>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="clear-mask" type="button" class="button secondary">清空涂抹</button>
+          <button id="run-inpaint" type="button" class="button primary" disabled>开始去水印</button>
+          <button id="download-result" type="button" class="button ghost" disabled>下载结果</button>
+        </div>
+
+        <div class="notes">
+          <p>使用方法：</p>
+          <p>1. 上传图片</p>
+          <p>2. 在左侧原图上涂抹水印区域</p>
+          <p>3. 点击“开始去水印”查看右侧结果</p>
+          <p id="debug-text">调试信息：等待处理</p>
+        </div>
+      </section>
+
+      <section class="panel workspace">
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <h2>原图与遮罩</h2>
+            <span id="image-meta">未加载图片</span>
+          </div>
+          <div id="editor-shell" class="canvas-shell canvas-shell-uploadable" data-role="upload-target">
+            <div id="editor-empty-state" class="empty-state">
+              <strong>点击或拖入图片</strong>
+              <span>上传后可直接在图上涂抹水印区域</span>
+            </div>
+            <div id="brush-indicator" class="brush-indicator" aria-hidden="true"></div>
+            <canvas id="editor-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <h2>去水印结果</h2>
+            <span id="result-meta">等待处理</span>
+          </div>
+          <div id="result-shell" class="canvas-shell canvas-shell-uploadable" data-role="upload-target">
+            <div id="result-empty-state" class="empty-state">
+              <strong>结果预览区</strong>
+              <span>也支持拖入图片，便于直接开始测试</span>
+            </div>
+            <canvas id="result-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
